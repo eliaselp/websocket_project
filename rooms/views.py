@@ -53,9 +53,8 @@ def create_room(request):
 @require_http_methods(["DELETE"])
 def delete_room(request, room_name):
     try:
-        room = Room.objects.get(name=room_name, is_active=True)
-        room.is_active = False
-        room.save()
+        room = Room.objects.get(name=room_name)
+        room.delete()
         return JsonResponse({'message': 'Room deleted successfully'})
     except Room.DoesNotExist:
         return JsonResponse({'error': 'Room not found'}, status=404)
