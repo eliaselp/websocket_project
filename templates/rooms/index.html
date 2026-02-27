@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Rooms</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header con logout */
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            transform: rotate(10deg);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-icon:hover {
+            transform: rotate(0deg) scale(1.1);
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .username {
+            padding: 10px 20px;
+            background: #f0f2f5;
+            border-radius: 30px;
+            color: #4a5568;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .username::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #48bb78;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        .logout-btn {
+            padding: 10px 25px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+
+        /* Create Room Section */
+        .create-room-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            animation: slideUp 0.5s ease 0.2s both;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .create-room-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        .btn:hover::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            20% {
+                transform: scale(25, 25);
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(40, 40);
+            }
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-create:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        /* Rooms Grid */
+        .rooms-section {
+            margin-bottom: 30px;
+        }
+
+        .rooms-section h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .room-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .room-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .room-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+        }
+
+        .room-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .room-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .room-name h3 {
+            font-size: 18px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .btn-delete {
+            background: #f56565;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        .btn-delete:hover {
+            background: #c53030;
+        }
+
+        .tokens {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .token-item {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .token-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .token-label {
+            font-weight: 600;
+            color: #4a5568;
+            display: inline-block;
+            width: 80px;
+        }
+
+        .token-value {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            color: #667eea;
+            border: 1px solid #e2e8f0;
+            word-break: break-all;
+            display: inline-block;
+            max-width: calc(100% - 90px);
+            font-size: 12px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-connect {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 8px;
+            background: #4299e1;
+        }
+
+        .btn-connect:hover {
+            background: #3182ce;
+        }
+
+        .btn-connect.master {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-connect.slave {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        /* WebSocket Panel */
+        .websocket-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            animation: slideUp 0.5s ease 0.4s both;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .panel-header h2 {
+            color: #2d3748;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .status-indicators {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background: #48bb78;
+            box-shadow: 0 0 10px #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.master {
+            background: #667eea;
+        }
+
+        .status-dot.slave {
+            background: #48bb78;
+        }
+
+        .status-label {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .status-value {
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .command-area {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .command-input {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .command-input input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .command-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .command-input input:disabled {
+            background: #f7fafc;
+            cursor: not-allowed;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-width: 120px;
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-disconnect {
+            background: #cbd5e0;
+            color: #4a5568;
+        }
+
+        .btn-disconnect:hover {
+            background: #a0aec0;
+        }
+
+        #messages {
+            height: 250px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            background: #f7fafc;
+        }
+
+        .message {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            animation: slideIn 0.3s ease;
+            max-width: 80%;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .message.system {
+            background: #e2e8f0;
+            color: #4a5568;
+            margin-right: auto;
+        }
+
+        .message.command {
+            background: #bee3f8;
+            color: #2c5282;
+            margin-left: auto;
+        }
+
+        .message.master {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.slave {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            margin-right: auto;
+        }
+
+        .timestamp {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+            background: #f7fafc;
+            border-radius: 12px;
+            border: 2px dashed #e2e8f0;
+        }
+
+        .empty-state span {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+                padding: 15px;
+            }
+
+            .logo {
+                justify-content: center;
+            }
+
+            .user-section {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .form-group {
+                flex-direction: column;
+            }
+
+            .input-wrapper {
+                min-width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .rooms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .token-value {
+                max-width: 100%;
+                margin-top: 5px;
+            }
+
+            .token-item {
+                flex-direction: column;
+            }
+
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .status-indicators {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .command-area {
+                flex-direction: column;
+            }
+
+            .command-input {
+                min-width: 100%;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with logout -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <h1>WebSocket Rooms</h1>
+            </div>
+            <div class="user-section">
+                <span class="username">{{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Room -->
+        <div class="create-room-section">
+            <h2>Create New Room</h2>
+            <div class="form-group">
+                <div class="input-wrapper">
+                    <input type="text" id="roomName" placeholder="Enter room name...">
+                </div>
+                <button class="btn btn-create" onclick="createRoom()">Create Room</button>
+            </div>
+        </div>
+
+        <!-- Active Rooms -->
+        <div class="rooms-section">
+            <h2>Active Rooms</h2>
+            <div class="rooms-grid" id="rooms">
+                {% for room in rooms %}
+                <div class="room-card" id="room-{{ room.name }}">
+                    <div class="room-header">
+                        <div class="room-name">
+                            <span class="status-badge"></span>
+                            <h3>{{ room.name }}</h3>
+                        </div>
+                        <button class="btn btn-delete" onclick="deleteRoom('{{ room.name }}')">Delete</button>
+                    </div>
+                    
+                    <div class="tokens">
+                        <div class="token-item">
+                            <span class="token-label">Master:</span>
+                            <span class="token-value">{{ room.master_token }}</span>
+                        </div>
+                        <div class="token-item">
+                            <span class="token-label">Slave:</span>
+                            <span class="token-value">{{ room.slave_token }}</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-connect master" onclick="connectMaster('{{ room.name }}', '{{ room.master_token }}')">👑 Master</button>
+                        <button class="btn-connect slave" onclick="connectSlave('{{ room.name }}', '{{ room.slave_token }}')">🔧 Slave</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <span>📭</span>
+                    <p>No active rooms</p>
+                    <p style="font-size: 14px;">Create your first room above</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- WebSocket Panel -->
+        <div class="websocket-panel">
+            <div class="panel-header">
+                <h2>WebSocket Connection</h2>
+                <div class="status-indicators">
+                    <div class="status-item">
+                        <span class="status-dot" id="roleDot"></span>
+                        <span class="status-label">Role:</span>
+                        <span class="status-value" id="currentRole">Not connected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot" id="roomDot"></span>
+                        <span class="status-label">Room:</span>
+                        <span class="status-value" id="currentRoom">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-area">
+                <div class="command-input">
+                    <input type="text" id="commandInput" placeholder="Enter command..." disabled>
+                </div>
+                <button class="btn btn-send" id="sendCommand" onclick="sendCommand()" disabled>Send</button>
+                <button class="btn btn-disconnect" onclick="disconnect()">Disconnect</button>
+            </div>
+
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentRole = null;
+        let currentRoomName = null;
+
+        function updateStatusDots() {
+            const roleDot = document.getElementById('roleDot');
+            const roomDot = document.getElementById('roomDot');
+            
+            if (currentRole) {
+                roleDot.className = `status-dot ${currentRole}`;
+                roomDot.className = 'status-dot connected';
+            } else {
+                roleDot.className = 'status-dot';
+                roomDot.className = 'status-dot';
+            }
+        }
+
+        function createRoom() {
+            const roomName = document.getElementById('roomName').value.trim();
+            
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
+
+            console.log('Enviando room name:', roomName); // Para debug
+
+            fetch('/rooms/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    name: roomName 
+                })
+            })
+            .then(async response => {
+                const text = await response.text(); // Primero obtenemos el texto
+                console.log('Respuesta raw:', text); // Vemos qué devuelve
+                
+                try {
+                    const data = JSON.parse(text); // Intentamos parsear
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Error creating room');
+                    }
+                    return data;
+                } catch (e) {
+                    throw new Error('Respuesta no válida del servidor: ' + text);
+                }
+            })
+            .then(data => {
+                console.log('Sala creada:', data);
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error completo:', error);
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function deleteRoom(roomName) {
+            if (!confirm('Are you sure you want to delete this room?')) {
+                return;
+            }
+
+            console.log('Eliminando sala:', roomName); // Para debug
+
+            fetch(`/rooms/delete/${roomName}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}', // Importante para DELETE también
+                },
+                credentials: 'same-origin'
+            })
+            .then(async response => {
+                const text = await response.text();
+                console.log('Respuesta delete:', text);
+                
+                try {
+                    const data = JSON.parse(text);
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Error deleting room');
+                    }
+                    return data;
+                } catch (e) {
+                    throw new Error('Error en la respuesta: ' + text);
+                }
+            })
+            .then(data => {
+                console.log('Sala eliminada:', data);
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error al eliminar:', error);
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function connectMaster(roomName, token) {
+            connect(roomName, token, 'master');
+        }
+
+        function connectSlave(roomName, token) {
+            connect(roomName, token, 'slave');
+        }
+
+        function connect(roomName, token, role) {
+            if (socket) {
+                socket.close();
+            }
+
+            const wsUrl = `ws://${window.location.host}/ws/room/${roomName}/${token}/`;
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(e) {
+                currentRole = role;
+                currentRoomName = roomName;
+                document.getElementById('currentRole').textContent = role.charAt(0).toUpperCase() + role.slice(1);
+                document.getElementById('currentRoom').textContent = roomName;
+                document.getElementById('commandInput').disabled = false;
+                document.getElementById('sendCommand').disabled = role !== 'master';
+                updateStatusDots();
+                addMessage('system', `Connected to room ${roomName} as ${role}`);
+            };
+
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'system') {
+                    addMessage('system', data.message);
+                } else if (data.type === 'command') {
+                    addMessage('command', `Received: ${data.command}`);
+                }
+            };
+
+            socket.onclose = function(event) {
+                if (event.wasClean) {
+                    addMessage('system', 'Connection closed');
+                } else {
+                    addMessage('system', 'Connection lost');
+                }
+                currentRole = null;
+                currentRoomName = null;
+                document.getElementById('currentRole').textContent = 'Not connected';
+                document.getElementById('currentRoom').textContent = '-';
+                document.getElementById('commandInput').disabled = true;
+                document.getElementById('sendCommand').disabled = true;
+                updateStatusDots();
+            };
+
+            socket.onerror = function(error) {
+                addMessage('system', 'WebSocket error');
+            };
+        }
+
+        function sendCommand() {
+            if (!socket || currentRole !== 'master') {
+                alert('Only master can send commands');
+                return;
+            }
+
+            const command = document.getElementById('commandInput').value.trim();
+            if (!command) {
+                alert('Please enter a command');
+                return;
+            }
+
+            socket.send(JSON.stringify({
+                type: 'command',
+                command: command
+            }));
+
+            addMessage('master', `Sent: ${command}`);
+            document.getElementById('commandInput').value = '';
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.close();
+            }
+        }
+
+        function addMessage(type, text) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                ${text}
+                <div class="timestamp">${timestamp}</div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        document.getElementById('commandInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !this.disabled) {
+                sendCommand();
+            }
+        });
+
+        updateStatusDots();
+    </script>
+</body>
+</html>
