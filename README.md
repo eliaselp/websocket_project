@@ -88,7 +88,7 @@ DJANGO_SETTINGS_MODULE=websocket_project.settings daphne -b 0.0.0.0 -p 8000 webs
 ```
   **(en windows)**
 ```bash
-set DJANGO_SETTINGS_MODULE=websocket_project.settings && daphne -b 0.0.0.0 -p 8000 websocket_project.asgi:application
+set "DJANGO_SETTINGS_MODULE=websocket_project.settings" && daphne -b 0.0.0.0 -p 8000 websocket_project.asgi:application
 ```
 ## 📦 Dependencias Principales
 ```
